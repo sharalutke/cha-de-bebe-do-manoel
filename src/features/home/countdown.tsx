@@ -7,7 +7,8 @@ type CountdownProps = {
 };
 
 function getDiff(targetDate: string) {
-  const distance = new Date(targetDate).getTime() - Date.now();
+  const targetTime = new Date(targetDate).getTime();
+  const distance = Number.isFinite(targetTime) ? targetTime - Date.now() : 0;
   const safeDistance = Math.max(distance, 0);
 
   return {

@@ -1,8 +1,12 @@
 import type { EventSettings } from "@/types/domain";
 
+export const DEFAULT_EVENT_DATE = "2026-10-18T15:00:00-03:00";
+
+const configuredEventDate = process.env.NEXT_PUBLIC_EVENT_DATE?.trim();
+
 export const eventSettings: EventSettings = {
   id: "local-event",
-  event_date: process.env.NEXT_PUBLIC_EVENT_DATE ?? "2026-10-18T15:00:00-03:00",
+  event_date: configuredEventDate || DEFAULT_EVENT_DATE,
   event_time: "15h",
   location_name: "Local a definir",
   address: "Endereco sera atualizado em breve",
