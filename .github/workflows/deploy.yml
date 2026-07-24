@@ -56,7 +56,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_7uhZ4pqp5DCf3JBat0cHdA_PTw0UQ_7' }}
           NEXT_PUBLIC_SITE_URL: ${{ steps.pages.outputs.base_url }}
           NEXT_PUBLIC_BASE_PATH: ${{ steps.pages-path.outputs.base_path }}
-          NEXT_PUBLIC_EVENT_DATE: ${{ vars.NEXT_PUBLIC_EVENT_DATE }}
+          NEXT_PUBLIC_EVENT_DATE: ${{ vars.NEXT_PUBLIC_EVENT_DATE || '2026-10-18T15:00:00-03:00' }}
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
