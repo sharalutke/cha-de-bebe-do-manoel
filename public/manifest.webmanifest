@@ -1,0 +1,19 @@
+{
+  "name": "Chá de Bebê do Manoel",
+  "short_name": "Manoel",
+  "description": "Lista de presentes do Chá de Bebê do Manoel.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#fbfaf7",
+  "theme_color": "#f4f7f1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
