@@ -33,8 +33,8 @@ Copie `.env.example` para `.env.local`:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://swlaxwpzkiakxbetrles.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_7uhZ4pqp5DCf3JBat0cHdA_PTw0UQ_7
-NEXT_PUBLIC_SITE_URL=https://seu-usuario.github.io/cha-de-bebe-manoel
-NEXT_PUBLIC_BASE_PATH=/cha-de-bebe-manoel
+NEXT_PUBLIC_SITE_URL=https://sharalutke.github.io/cha-de-bebe-do-manoel
+NEXT_PUBLIC_BASE_PATH=/cha-de-bebe-do-manoel
 NEXT_PUBLIC_EVENT_DATE=2026-10-18T15:00:00-03:00
 ```
 
@@ -97,6 +97,19 @@ O painel em `/admin` permite:
 - visualizar e cancelar reservas
 - exportar reservas em CSV compativel com Excel
 - acompanhar estatísticas e progresso do enxoval
+
+### Criar admin pelo terminal
+
+1. Copie `admin.env.example` para `admin.env.local`.
+2. No Supabase, copie uma Secret key ou service_role key em Settings > API Keys.
+3. Preencha `SUPABASE_SECRET_KEY`, `ADMIN_EMAIL` e `ADMIN_PASSWORD`.
+4. Rode:
+
+```bash
+npm run admin:create
+```
+
+Nunca suba `admin.env.local` para o GitHub.
 
 ## Manutenção futura
 
