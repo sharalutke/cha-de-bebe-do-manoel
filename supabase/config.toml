@@ -1,4 +1,4 @@
-project_id = "cha-de-bebe-manoel"
+project_id = "cha-de-bebe-do-manoel"
 
 [api]
 enabled = true
@@ -8,8 +8,8 @@ max_rows = 1000
 
 [auth]
 enabled = true
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["https://seu-usuario.github.io/cha-de-bebe-manoel/"]
+site_url = "https://sharalutke.github.io/cha-de-bebe-do-manoel/"
+additional_redirect_urls = ["http://localhost:3000/cha-de-bebe-do-manoel/", "https://sharalutke.github.io/cha-de-bebe-do-manoel/"]
 
 [db]
 major_version = 15

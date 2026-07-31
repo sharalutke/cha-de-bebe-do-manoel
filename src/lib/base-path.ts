@@ -10,5 +10,5 @@ export function withBasePath(path: string) {
 }
 
 export function getSiteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "https://seu-usuario.github.io/cha-de-bebe-manoel";
+  return process.env.NEXT_PUBLIC_SITE_URL ?? "https://sharalutke.github.io/cha-de-bebe-do-manoel";
 }
