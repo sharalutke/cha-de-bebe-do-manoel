@@ -4,16 +4,21 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import {
   BarChart3,
+  CalendarDays,
+  Camera,
   Download,
   Edit3,
   Gift,
   Lock,
   LogOut,
+  MapPin,
+  MessageCircle,
   PackageCheck,
   Plus,
   RefreshCcw,
   Save,
   ShieldCheck,
+  Shirt,
   Tags,
   Trash2,
   Unlock,
@@ -23,12 +28,40 @@ import { useToast } from "@/components/toast-provider";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { TextAreaField, TextField } from "@/components/ui/text-field";
+import { eventSettings as fallbackEventSettings } from "@/data/event";
 import { categories as fallbackCategories, gifts as fallbackGifts } from "@/data/registry";
 import { cn } from "@/lib/cn";
+import { withBasePath } from "@/lib/base-path";
 import { calculateRegistryProgress } from "@/lib/progress";
 import { slugify } from "@/lib/slugify";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
-import type { Category, Gift as GiftType, RegistryProgress, Reservation } from "@/types/domain";
+import type {
+  Category,
+  EventSettings,
+  Gift as GiftType,
+  RegistryProgress,
+  Reservation,
+} from "@/types/domain";
+
+const EVENT_SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
+
+type EventFormState = {
+  id?: string;
+  event_date: string;
+  event_time: string;
+  location_name: string;
+  address: string;
+  google_maps_url: string;
+  whatsapp_number: string;
+  dress_code: string;
+  welcome_message: string;
+  event_headline: string;
+  event_description: string;
+  couple_photo_url: string;
+  couple_photo_alt: string;
+  ultrasound_photo_url: string;
+  ultrasound_photo_alt: string;
+};
 
 type GiftFormState = {
   id?: string;
@@ -55,6 +88,52 @@ type CategoryFormState = {
   display_order: number;
   is_active: boolean;
 };
+
+function toDateTimeLocalValue(value: string) {
+  const date = new Date(value);
+
+  if (!Number.isFinite(date.getTime())) {
+    return "";
+  }
+
+  const parts = new Intl.DateTimeFormat("sv-SE", {
+    dateStyle: "short",
+    timeStyle: "short",
+    hour12: false,
+    timeZone: "America/Sao_Paulo",
+  }).formatToParts(date);
+
+  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value.padStart(2, "0") ?? "00";
+
+  return `${getPart("year")}-${getPart("month")}-${getPart("day")}T${getPart("hour")}:${getPart(
+    "minute",
+  )}`;
+}
+
+function toSupabaseDateTime(value: string) {
+  return value ? `${value}:00-03:00` : fallbackEventSettings.event_date;
+}
+
+function eventToForm(settings: EventSettings): EventFormState {
+  return {
+    id: settings.id,
+    event_date: toDateTimeLocalValue(settings.event_date),
+    event_time: settings.event_time,
+    location_name: settings.location_name,
+    address: settings.address,
+    google_maps_url: settings.google_maps_url,
+    whatsapp_number: settings.whatsapp_number,
+    dress_code: settings.dress_code ?? "",
+    welcome_message: settings.welcome_message,
+    event_headline: settings.event_headline ?? "",
+    event_description: settings.event_description ?? "",
+    couple_photo_url: settings.couple_photo_url ?? "",
+    couple_photo_alt: settings.couple_photo_alt ?? "",
+    ultrasound_photo_url: settings.ultrasound_photo_url ?? "",
+    ultrasound_photo_alt: settings.ultrasound_photo_alt ?? "",
+  };
+}
 
 const emptyGift = (categoryId = ""): GiftFormState => ({
   category_id: categoryId,
@@ -91,12 +170,15 @@ export function AdminPage() {
   const [categories, setCategories] = useState<Category[]>(fallbackCategories);
   const [gifts, setGifts] = useState<GiftType[]>(fallbackGifts);
   const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [eventForm, setEventForm] = useState<EventFormState>(() =>
+    eventToForm(fallbackEventSettings),
+  );
   const [progress, setProgress] = useState<RegistryProgress>(() =>
     calculateRegistryProgress(fallbackGifts),
   );
-  const [activeTab, setActiveTab] = useState<"dashboard" | "gifts" | "categories" | "reservations">(
-    "dashboard",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "dashboard" | "event" | "gifts" | "categories" | "reservations"
+  >("dashboard");
   const [giftForm, setGiftForm] = useState<GiftFormState>(() =>
     emptyGift(fallbackCategories[0]?.id),
   );
@@ -107,6 +189,7 @@ export function AdminPage() {
     if (!supabase) {
       setCategories(fallbackCategories);
       setGifts(fallbackGifts);
+      setEventForm(eventToForm(fallbackEventSettings));
       setProgress(calculateRegistryProgress(fallbackGifts));
       setIsAuthChecked(true);
       return;
@@ -129,7 +212,14 @@ export function AdminPage() {
       return;
     }
 
-    const [categoriesResult, giftsResult, reservationsResult, progressResult] = await Promise.all([
+    const [eventResult, categoriesResult, giftsResult, reservationsResult, progressResult] =
+      await Promise.all([
+      supabase
+        .from("event_settings")
+        .select("*")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle(),
       supabase.from("categories").select("*").order("display_order", { ascending: true }),
       supabase
         .from("gifts")
@@ -142,10 +232,16 @@ export function AdminPage() {
       supabase.rpc("get_registry_progress").maybeSingle(),
     ]);
 
-    if (categoriesResult.error || giftsResult.error || reservationsResult.error) {
+    if (
+      eventResult.error ||
+      categoriesResult.error ||
+      giftsResult.error ||
+      reservationsResult.error
+    ) {
       showToast({
         title: "Falha ao carregar admin",
         description:
+          eventResult.error?.message ??
           categoriesResult.error?.message ??
           giftsResult.error?.message ??
           reservationsResult.error?.message,
@@ -154,6 +250,7 @@ export function AdminPage() {
       return;
     }
 
+    setEventForm(eventToForm((eventResult.data as EventSettings | null) ?? fallbackEventSettings));
     setCategories((categoriesResult.data ?? []) as Category[]);
     setGifts((giftsResult.data ?? []) as unknown as GiftType[]);
     setReservations((reservationsResult.data ?? []) as unknown as Reservation[]);
@@ -234,6 +331,53 @@ export function AdminPage() {
     await supabase.auth.signOut();
     setSession(null);
     setIsAdmin(false);
+  }
+
+  async function handleSaveEvent(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!supabase || !isAdmin) {
+      showToast({
+        title: "Conecte o Supabase para salvar",
+        description: "O painel esta exibindo dados locais de demonstracao.",
+        variant: "info",
+      });
+      return;
+    }
+
+    const payload = {
+      id: eventForm.id ?? EVENT_SETTINGS_ID,
+      event_date: toSupabaseDateTime(eventForm.event_date),
+      event_time: eventForm.event_time.trim(),
+      location_name: eventForm.location_name.trim(),
+      address: eventForm.address.trim(),
+      google_maps_url: eventForm.google_maps_url.trim() || "https://maps.google.com",
+      whatsapp_number: eventForm.whatsapp_number.trim(),
+      dress_code: eventForm.dress_code.trim() || null,
+      welcome_message: eventForm.welcome_message.trim(),
+      event_headline: eventForm.event_headline.trim() || null,
+      event_description: eventForm.event_description.trim() || null,
+      couple_photo_url: eventForm.couple_photo_url.trim() || null,
+      couple_photo_alt: eventForm.couple_photo_alt.trim() || null,
+      ultrasound_photo_url: eventForm.ultrasound_photo_url.trim() || null,
+      ultrasound_photo_alt: eventForm.ultrasound_photo_alt.trim() || null,
+    };
+
+    const { error } = await supabase.from("event_settings").upsert(payload, {
+      onConflict: "id",
+    });
+
+    if (error) {
+      showToast({
+        title: "Evento nao salvo",
+        description: error.message,
+        variant: "error",
+      });
+      return;
+    }
+
+    showToast({ title: "Evento salvo", variant: "success" });
+    await loadData();
   }
 
   async function handleSaveGift(event: FormEvent<HTMLFormElement>) {
@@ -565,6 +709,13 @@ export function AdminPage() {
         >
           Dashboard
         </TabButton>
+        <TabButton
+          active={activeTab === "event"}
+          onClick={() => setActiveTab("event")}
+          icon={CalendarDays}
+        >
+          Evento
+        </TabButton>
         <TabButton active={activeTab === "gifts"} onClick={() => setActiveTab("gifts")} icon={Gift}>
           Presentes
         </TabButton>
@@ -586,6 +737,10 @@ export function AdminPage() {
 
       {activeTab === "dashboard" ? (
         <Dashboard stats={stats} progress={progress} reservations={reservations} />
+      ) : null}
+
+      {activeTab === "event" ? (
+        <EventForm form={eventForm} setForm={setEventForm} onSubmit={handleSaveEvent} />
       ) : null}
 
       {activeTab === "gifts" ? (
@@ -737,6 +892,184 @@ function Metric({ label, value }: { label: string; value: string }) {
         {label}
       </p>
       <p className="mt-1 text-xl font-semibold text-sage-800">{value}</p>
+    </div>
+  );
+}
+
+function EventForm({
+  form,
+  setForm,
+  onSubmit,
+}: {
+  form: EventFormState;
+  setForm: React.Dispatch<React.SetStateAction<EventFormState>>;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <form onSubmit={onSubmit} className="premium-card grid gap-6 rounded-[32px] p-6">
+      <div>
+        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-sage-700">
+          Configuracao do evento
+        </p>
+        <h2 className="mt-2 font-serif text-4xl text-sage-900">Dados principais</h2>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 rounded-[28px] border border-sage-100 bg-white/55 p-5">
+          <EventBlockTitle icon={CalendarDays} label="Data e chamada" />
+          <TextField
+            label="Data e horario reais"
+            type="datetime-local"
+            value={form.event_date}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, event_date: event.target.value }))
+            }
+            required
+          />
+          <TextField
+            label="Horario exibido no site"
+            value={form.event_time}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, event_time: event.target.value }))
+            }
+            required
+          />
+          <TextField
+            label="Titulo da secao do evento"
+            value={form.event_headline}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, event_headline: event.target.value }))
+            }
+          />
+          <TextAreaField
+            label="Texto da secao do evento"
+            value={form.event_description}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, event_description: event.target.value }))
+            }
+          />
+        </div>
+
+        <div className="grid gap-4 rounded-[28px] border border-sage-100 bg-white/55 p-5">
+          <EventBlockTitle icon={MapPin} label="Local e contato" />
+          <TextField
+            label="Nome do local"
+            value={form.location_name}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, location_name: event.target.value }))
+            }
+            required
+          />
+          <TextAreaField
+            label="Endereco"
+            value={form.address}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, address: event.target.value }))
+            }
+            required
+          />
+          <TextField
+            label="Link do Google Maps"
+            type="url"
+            value={form.google_maps_url}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, google_maps_url: event.target.value }))
+            }
+          />
+          <TextField
+            label="WhatsApp com DDI e DDD"
+            value={form.whatsapp_number}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, whatsapp_number: event.target.value }))
+            }
+            required
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 rounded-[28px] border border-sage-100 bg-white/55 p-5">
+          <EventBlockTitle icon={MessageCircle} label="Texto de boas-vindas" />
+          <TextAreaField
+            label="Mensagem da capa"
+            value={form.welcome_message}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, welcome_message: event.target.value }))
+            }
+            required
+          />
+          <EventBlockTitle icon={Shirt} label="Dress code" />
+          <TextAreaField
+            label="Orientacao de roupa"
+            value={form.dress_code}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, dress_code: event.target.value }))
+            }
+          />
+        </div>
+
+        <div className="grid gap-4 rounded-[28px] border border-sage-100 bg-white/55 p-5">
+          <EventBlockTitle icon={Camera} label="Fotos da home" />
+          <TextField
+            label="URL da foto do casal"
+            value={form.couple_photo_url}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, couple_photo_url: event.target.value }))
+            }
+          />
+          <TextField
+            label="Texto alternativo da foto do casal"
+            value={form.couple_photo_alt}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, couple_photo_alt: event.target.value }))
+            }
+          />
+          <PhotoPreview url={form.couple_photo_url} alt={form.couple_photo_alt} />
+          <TextField
+            label="URL da foto do ultrassom"
+            value={form.ultrasound_photo_url}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, ultrasound_photo_url: event.target.value }))
+            }
+          />
+          <TextField
+            label="Texto alternativo do ultrassom"
+            value={form.ultrasound_photo_alt}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, ultrasound_photo_alt: event.target.value }))
+            }
+          />
+          <PhotoPreview url={form.ultrasound_photo_url} alt={form.ultrasound_photo_alt} />
+        </div>
+      </div>
+
+      <Button type="submit" icon={Save} className="w-fit">
+        Salvar evento
+      </Button>
+    </form>
+  );
+}
+
+function EventBlockTitle({ icon: Icon, label }: { icon: typeof CalendarDays; label: string }) {
+  return (
+    <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-sage-700">
+      <Icon aria-hidden className="size-4" />
+      {label}
+    </p>
+  );
+}
+
+function PhotoPreview({ url, alt }: { url: string; alt: string }) {
+  const imageUrl = url.trim();
+
+  if (!imageUrl) {
+    return null;
+  }
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-sage-100 bg-white">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={withBasePath(imageUrl)} alt={alt || "Previa da foto"} className="h-36 w-full object-cover" />
     </div>
   );
 }

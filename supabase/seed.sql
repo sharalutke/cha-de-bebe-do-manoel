@@ -7,18 +7,30 @@ insert into public.event_settings (
   google_maps_url,
   whatsapp_number,
   dress_code,
-  welcome_message
+  welcome_message,
+  event_headline,
+  event_description,
+  couple_photo_url,
+  couple_photo_alt,
+  ultrasound_photo_url,
+  ultrasound_photo_alt
 )
 values (
   '00000000-0000-0000-0000-000000000001',
-  '2026-10-18 15:00:00-03',
+  '2026-08-22 15:00:00-03',
   '15h',
-  'Local a definir',
-  'Endereco sera atualizado em breve',
+  'Informe o local no admin',
+  'Informe o endereco no admin',
   'https://maps.google.com',
   '5500000000000',
   'Tons claros, verde salvia, bege ou branco',
-  'Estamos preparando cada detalhe com carinho para receber o Manoel. Sua presenca e seu gesto tornam esse momento ainda mais especial.'
+  'Estamos preparando cada detalhe com carinho para receber o Manoel. Sua presenca e seu gesto tornam esse momento ainda mais especial.',
+  'Um encontro leve e cheio de afeto',
+  'Confira data, horario, local e orientacoes do cha de bebe.',
+  null,
+  'Foto da familia do Manoel',
+  null,
+  'Ultrassom do Manoel'
 )
 on conflict (id) do update
 set
@@ -29,7 +41,13 @@ set
   google_maps_url = excluded.google_maps_url,
   whatsapp_number = excluded.whatsapp_number,
   dress_code = excluded.dress_code,
-  welcome_message = excluded.welcome_message;
+  welcome_message = excluded.welcome_message,
+  event_headline = excluded.event_headline,
+  event_description = excluded.event_description,
+  couple_photo_url = excluded.couple_photo_url,
+  couple_photo_alt = excluded.couple_photo_alt,
+  ultrasound_photo_url = excluded.ultrasound_photo_url,
+  ultrasound_photo_alt = excluded.ultrasound_photo_alt;
 
 insert into public.categories (name, slug, description, display_order, is_active)
 values

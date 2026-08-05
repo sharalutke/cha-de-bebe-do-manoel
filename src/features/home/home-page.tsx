@@ -73,15 +73,19 @@ export function HomePage() {
         >
           <PhotoFrame
             title="Foto do casal"
-            subtitle="Espaco preparado para a imagem oficial da familia."
+            subtitle="Imagem principal da familia."
             icon={Camera}
+            imageUrl={eventSettings.couple_photo_url}
+            imageAlt={eventSettings.couple_photo_alt}
             className="min-h-[340px]"
           />
           <div className="grid gap-4 sm:grid-cols-2">
             <PhotoFrame
               title="Ultrassom"
-              subtitle="Placeholder para guardar esse primeiro retrato do Manoel."
+              subtitle="Primeiro retrato do Manoel."
               icon={ScanLine}
+              imageUrl={eventSettings.ultrasound_photo_url}
+              imageAlt={eventSettings.ultrasound_photo_alt}
             />
             <div className="premium-card rounded-[32px] p-6">
               <div className="mb-5 flex size-12 items-center justify-center rounded-full bg-sage-100 text-sage-700">
@@ -134,18 +138,25 @@ export function HomePage() {
               Informacoes do evento
             </p>
             <h2 className="font-serif text-5xl leading-none text-sage-900">
-              Um encontro leve e cheio de afeto
+              {eventSettings.event_headline ?? "Informacoes do evento"}
             </h2>
             <p className="mt-5 text-pretty leading-8 text-ink-900/65">
-              A estrutura esta pronta para atualizar data, horario, local, mapa, WhatsApp e dress
-              code no Supabase quando os detalhes finais estiverem definidos.
+              {eventSettings.event_description ??
+                "Confira data, horario, local e orientacoes do cha de bebe."}
             </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <InfoCard icon={CalendarDays} title="Data" value={dateFormatter.format(eventDate)} />
             <InfoCard icon={Sparkles} title="Horario" value={eventSettings.event_time} />
-            <InfoCard icon={MapPin} title="Local" value={eventSettings.location_name} />
+            <InfoCard
+              icon={MapPin}
+              title="Local"
+              value={eventSettings.location_name}
+              detail={eventSettings.address}
+              href={eventSettings.google_maps_url}
+              linkLabel="Abrir mapa"
+            />
             <InfoCard
               icon={Shirt}
               title="Dress code"
@@ -173,9 +184,12 @@ type InfoCardProps = {
   icon: typeof CalendarDays;
   title: string;
   value: string;
+  detail?: string;
+  href?: string;
+  linkLabel?: string;
 };
 
-function InfoCard({ icon: Icon, title, value }: InfoCardProps) {
+function InfoCard({ icon: Icon, title, value, detail, href, linkLabel }: InfoCardProps) {
   return (
     <div className="premium-card rounded-[32px] p-6">
       <div className="mb-5 flex size-11 items-center justify-center rounded-full bg-sage-100 text-sage-700">
@@ -183,6 +197,17 @@ function InfoCard({ icon: Icon, title, value }: InfoCardProps) {
       </div>
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sage-700">{title}</p>
       <p className="mt-2 text-pretty text-lg font-semibold leading-7 text-ink-900">{value}</p>
+      {detail ? <p className="mt-2 text-sm leading-6 text-ink-900/60">{detail}</p> : null}
+      {href ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-4 inline-flex text-sm font-semibold text-sage-700 hover:text-sage-900"
+        >
+          {linkLabel ?? "Abrir link"}
+        </a>
+      ) : null}
     </div>
   );
 }

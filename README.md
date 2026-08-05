@@ -35,7 +35,7 @@ NEXT_PUBLIC_SUPABASE_URL=https://swlaxwpzkiakxbetrles.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_7uhZ4pqp5DCf3JBat0cHdA_PTw0UQ_7
 NEXT_PUBLIC_SITE_URL=https://sharalutke.github.io/cha-de-bebe-do-manoel
 NEXT_PUBLIC_BASE_PATH=/cha-de-bebe-do-manoel
-NEXT_PUBLIC_EVENT_DATE=2026-10-18T15:00:00-03:00
+NEXT_PUBLIC_EVENT_DATE=2026-08-22T15:00:00-03:00
 ```
 
 Use `NEXT_PUBLIC_BASE_PATH` vazio se o repositório for `seu-usuario.github.io`.
@@ -90,6 +90,7 @@ O workflow calcula automaticamente o `basePath` para repositórios de projeto.
 
 O painel em `/admin` permite:
 
+- editar data, horario, local, endereco, mapa, WhatsApp, dress code, textos do evento e fotos da home
 - adicionar e editar presentes
 - editar marcas sugeridas, pesos, categorias, quantidades e imagens
 - arquivar presentes
@@ -110,6 +111,30 @@ npm run admin:create
 ```
 
 Nunca suba `admin.env.local` para o GitHub.
+
+### Atualizar campos do evento no Supabase
+
+Se o projeto Supabase ja existia antes da aba Evento no admin, rode uma vez no SQL Editor:
+
+```sql
+alter table public.event_settings
+  add column if not exists event_headline text,
+  add column if not exists event_description text,
+  add column if not exists couple_photo_url text,
+  add column if not exists couple_photo_alt text,
+  add column if not exists ultrasound_photo_url text,
+  add column if not exists ultrasound_photo_alt text;
+
+update public.event_settings
+set
+  event_date = '2026-08-22 15:00:00-03',
+  event_time = '15h',
+  event_headline = coalesce(event_headline, 'Um encontro leve e cheio de afeto'),
+  event_description = coalesce(event_description, 'Confira data, horario, local e orientacoes do cha de bebe.'),
+  couple_photo_alt = coalesce(couple_photo_alt, 'Foto da familia do Manoel'),
+  ultrasound_photo_alt = coalesce(ultrasound_photo_alt, 'Ultrassom do Manoel')
+where id = '00000000-0000-0000-0000-000000000001';
+```
 
 ## Manutenção futura
 

@@ -25,6 +25,12 @@ create table if not exists public.event_settings (
   whatsapp_number text not null,
   dress_code text,
   welcome_message text not null,
+  event_headline text,
+  event_description text,
+  couple_photo_url text,
+  couple_photo_alt text,
+  ultrasound_photo_url text,
+  ultrasound_photo_alt text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

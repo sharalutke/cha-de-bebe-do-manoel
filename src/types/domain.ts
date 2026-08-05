@@ -55,6 +55,12 @@ export type EventSettings = {
   whatsapp_number: string;
   dress_code: string | null;
   welcome_message: string;
+  event_headline: string | null;
+  event_description: string | null;
+  couple_photo_url: string | null;
+  couple_photo_alt: string | null;
+  ultrasound_photo_url: string | null;
+  ultrasound_photo_alt: string | null;
 };
 
 export type RegistryProgress = {
