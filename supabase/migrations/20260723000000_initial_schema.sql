@@ -53,6 +53,7 @@ create table if not exists public.gifts (
   slug text not null unique,
   suggested_brands text[] not null default '{}',
   image_url text,
+  product_url text,
   description text not null,
   notes text,
   quantity_needed integer not null check (quantity_needed > 0),

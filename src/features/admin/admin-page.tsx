@@ -22,6 +22,7 @@ import {
   Tags,
   Trash2,
   Unlock,
+  Upload,
 } from "lucide-react";
 
 import { useToast } from "@/components/toast-provider";
@@ -44,6 +45,9 @@ import type {
 } from "@/types/domain";
 
 const EVENT_SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
+const EVENT_MEDIA_BUCKET = "event-media";
+
+type EventImageField = "couple_photo_url" | "ultrasound_photo_url";
 
 type EventFormState = {
   id?: string;
@@ -70,6 +74,7 @@ type GiftFormState = {
   slug: string;
   suggested_brands: string;
   image_url: string;
+  product_url: string;
   description: string;
   notes: string;
   quantity_needed: number;
@@ -115,6 +120,20 @@ function toSupabaseDateTime(value: string) {
   return value ? `${value}:00-03:00` : fallbackEventSettings.event_date;
 }
 
+function getEventMediaPath(field: EventImageField, file: File) {
+  const folder = field === "couple_photo_url" ? "casal" : "ultrassom";
+  const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const safeName = file.name
+    .replace(/\.[^.]+$/, "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
+
+  return `${folder}/${Date.now()}-${safeName || "foto"}.${extension}`;
+}
+
 function eventToForm(settings: EventSettings): EventFormState {
   return {
     id: settings.id,
@@ -141,6 +160,7 @@ const emptyGift = (categoryId = ""): GiftFormState => ({
   slug: "",
   suggested_brands: "",
   image_url: "",
+  product_url: "",
   description: "",
   notes: "",
   quantity_needed: 1,
@@ -184,6 +204,7 @@ export function AdminPage() {
   );
   const [categoryForm, setCategoryForm] = useState<CategoryFormState>(emptyCategory);
   const [isBusy, setIsBusy] = useState(false);
+  const [uploadingField, setUploadingField] = useState<EventImageField | null>(null);
 
   const loadData = useCallback(async () => {
     if (!supabase) {
@@ -380,6 +401,50 @@ export function AdminPage() {
     await loadData();
   }
 
+  async function handleUploadEventImage(field: EventImageField, file: File) {
+    if (!supabase || !isAdmin) {
+      showToast({
+        title: "Conecte o Supabase para enviar fotos",
+        description: "O upload usa o Storage do Supabase.",
+        variant: "info",
+      });
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      showToast({
+        title: "Arquivo invalido",
+        description: "Escolha uma imagem JPG, PNG, WebP ou GIF.",
+        variant: "error",
+      });
+      return;
+    }
+
+    setUploadingField(field);
+    const path = getEventMediaPath(field, file);
+
+    const { error } = await supabase.storage.from(EVENT_MEDIA_BUCKET).upload(path, file, {
+      cacheControl: "31536000",
+      contentType: file.type,
+      upsert: true,
+    });
+
+    setUploadingField(null);
+
+    if (error) {
+      showToast({
+        title: "Foto nao enviada",
+        description: error.message,
+        variant: "error",
+      });
+      return;
+    }
+
+    const { data } = supabase.storage.from(EVENT_MEDIA_BUCKET).getPublicUrl(path);
+    setEventForm((current) => ({ ...current, [field]: data.publicUrl }));
+    showToast({ title: "Foto enviada", description: "Agora salve o evento.", variant: "success" });
+  }
+
   async function handleSaveGift(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -401,6 +466,7 @@ export function AdminPage() {
         .map((brand) => brand.trim())
         .filter(Boolean),
       image_url: giftForm.image_url.trim() || null,
+      product_url: giftForm.product_url.trim() || null,
       description: giftForm.description.trim(),
       notes: giftForm.notes.trim() || null,
       quantity_needed: Number(giftForm.quantity_needed),
@@ -575,6 +641,7 @@ export function AdminPage() {
       slug: gift.slug,
       suggested_brands: gift.suggested_brands.join("\n"),
       image_url: gift.image_url ?? "",
+      product_url: gift.product_url ?? "",
       description: gift.description,
       notes: gift.notes ?? "",
       quantity_needed: gift.quantity_needed,
@@ -740,7 +807,13 @@ export function AdminPage() {
       ) : null}
 
       {activeTab === "event" ? (
-        <EventForm form={eventForm} setForm={setEventForm} onSubmit={handleSaveEvent} />
+        <EventForm
+          form={eventForm}
+          setForm={setEventForm}
+          uploadingField={uploadingField}
+          onUploadImage={handleUploadEventImage}
+          onSubmit={handleSaveEvent}
+        />
       ) : null}
 
       {activeTab === "gifts" ? (
@@ -899,10 +972,14 @@ function Metric({ label, value }: { label: string; value: string }) {
 function EventForm({
   form,
   setForm,
+  uploadingField,
+  onUploadImage,
   onSubmit,
 }: {
   form: EventFormState;
   setForm: React.Dispatch<React.SetStateAction<EventFormState>>;
+  uploadingField: EventImageField | null;
+  onUploadImage: (field: EventImageField, file: File) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
@@ -1010,12 +1087,13 @@ function EventForm({
 
         <div className="grid gap-4 rounded-[28px] border border-sage-100 bg-white/55 p-5">
           <EventBlockTitle icon={Camera} label="Fotos da home" />
-          <TextField
-            label="URL da foto do casal"
+          <ImageUploadField
+            label="Foto do casal"
             value={form.couple_photo_url}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, couple_photo_url: event.target.value }))
-            }
+            alt={form.couple_photo_alt}
+            isUploading={uploadingField === "couple_photo_url"}
+            onChange={(value) => setForm((current) => ({ ...current, couple_photo_url: value }))}
+            onUpload={(file) => onUploadImage("couple_photo_url", file)}
           />
           <TextField
             label="Texto alternativo da foto do casal"
@@ -1024,13 +1102,15 @@ function EventForm({
               setForm((current) => ({ ...current, couple_photo_alt: event.target.value }))
             }
           />
-          <PhotoPreview url={form.couple_photo_url} alt={form.couple_photo_alt} />
-          <TextField
-            label="URL da foto do ultrassom"
+          <ImageUploadField
+            label="Foto do ultrassom"
             value={form.ultrasound_photo_url}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, ultrasound_photo_url: event.target.value }))
+            alt={form.ultrasound_photo_alt}
+            isUploading={uploadingField === "ultrasound_photo_url"}
+            onChange={(value) =>
+              setForm((current) => ({ ...current, ultrasound_photo_url: value }))
             }
+            onUpload={(file) => onUploadImage("ultrasound_photo_url", file)}
           />
           <TextField
             label="Texto alternativo do ultrassom"
@@ -1039,7 +1119,6 @@ function EventForm({
               setForm((current) => ({ ...current, ultrasound_photo_alt: event.target.value }))
             }
           />
-          <PhotoPreview url={form.ultrasound_photo_url} alt={form.ultrasound_photo_alt} />
         </div>
       </div>
 
@@ -1056,6 +1135,56 @@ function EventBlockTitle({ icon: Icon, label }: { icon: typeof CalendarDays; lab
       <Icon aria-hidden className="size-4" />
       {label}
     </p>
+  );
+}
+
+function ImageUploadField({
+  label,
+  value,
+  alt,
+  isUploading,
+  onChange,
+  onUpload,
+}: {
+  label: string;
+  value: string;
+  alt: string;
+  isUploading: boolean;
+  onChange: (value: string) => void;
+  onUpload: (file: File) => void;
+}) {
+  return (
+    <div className="grid gap-3">
+      <div className="grid gap-2 text-sm font-medium text-ink-900/80">
+        {label}
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <label className="focus-within:ring-sage-700/25 inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-full bg-sage-700 px-5 text-sm font-semibold text-white shadow-soft transition hover:bg-sage-800 focus-within:ring-4">
+            <Upload aria-hidden className="size-4" />
+            {isUploading ? "Enviando..." : "Escolher arquivo"}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="sr-only"
+              disabled={isUploading}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) {
+                  onUpload(file);
+                  event.target.value = "";
+                }
+              }}
+            />
+          </label>
+          <input
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder="A URL aparece aqui depois do upload"
+            className="focus-ring min-h-11 min-w-0 flex-1 rounded-2xl border border-sage-200 bg-white/80 px-4 text-ink-900 shadow-sm transition placeholder:text-ink-900/35 focus:border-sage-500"
+          />
+        </div>
+      </div>
+      <PhotoPreview url={value} alt={alt} />
+    </div>
   );
 }
 
@@ -1159,6 +1288,15 @@ function GiftForm({
         label="URL da imagem"
         value={form.image_url}
         onChange={(event) => setForm((current) => ({ ...current, image_url: event.target.value }))}
+      />
+      <TextField
+        label="Link do presente"
+        type="url"
+        value={form.product_url}
+        onChange={(event) =>
+          setForm((current) => ({ ...current, product_url: event.target.value }))
+        }
+        placeholder="https://loja.com/produto"
       />
       <div className="grid gap-4 sm:grid-cols-3">
         <TextField
@@ -1266,6 +1404,7 @@ function GiftTable({
               <p className="mt-1 text-sm text-ink-900/58">
                 {gift.quantity_owned + gift.quantity_reserved}/{gift.quantity_needed} completo ·
                 peso {gift.progress_weight} · {gift.status}
+                {gift.product_url ? " · com link" : ""}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">

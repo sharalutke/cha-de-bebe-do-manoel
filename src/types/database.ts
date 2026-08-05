@@ -33,6 +33,7 @@ export type Database = {
           slug: string;
           suggested_brands?: string[];
           image_url?: string | null;
+          product_url?: string | null;
           description: string;
           notes?: string | null;
           quantity_needed: number;
@@ -49,6 +50,7 @@ export type Database = {
           slug: string;
           suggested_brands: string[];
           image_url: string | null;
+          product_url: string | null;
           description: string;
           notes: string | null;
           quantity_needed: number;

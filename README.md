@@ -92,7 +92,7 @@ O painel em `/admin` permite:
 
 - editar data, horario, local, endereco, mapa, WhatsApp, dress code, textos do evento e fotos da home
 - adicionar e editar presentes
-- editar marcas sugeridas, pesos, categorias, quantidades e imagens
+- editar marcas sugeridas, pesos, categorias, quantidades, imagens e links de presentes
 - arquivar presentes
 - liberar presentes cancelando reservas confirmadas
 - visualizar e cancelar reservas
@@ -114,7 +114,20 @@ Nunca suba `admin.env.local` para o GitHub.
 
 ### Atualizar campos do evento no Supabase
 
-Se o projeto Supabase ja existia antes da aba Evento no admin, rode uma vez no SQL Editor:
+Se o projeto Supabase ja existia antes da aba Evento no admin, rode uma vez no SQL Editor o arquivo:
+
+```text
+supabase/migrations/20260805000000_media_uploads_and_gift_links.sql
+```
+
+Ele cria/atualiza:
+
+- campos editaveis do evento
+- campo `product_url` nos presentes
+- bucket publico `event-media` no Supabase Storage
+- permissoes para admins autenticados enviarem fotos
+
+O SQL principal e:
 
 ```sql
 alter table public.event_settings
@@ -125,15 +138,8 @@ alter table public.event_settings
   add column if not exists ultrasound_photo_url text,
   add column if not exists ultrasound_photo_alt text;
 
-update public.event_settings
-set
-  event_date = '2026-08-22 15:00:00-03',
-  event_time = '15h',
-  event_headline = coalesce(event_headline, 'Um encontro leve e cheio de afeto'),
-  event_description = coalesce(event_description, 'Confira data, horario, local e orientacoes do cha de bebe.'),
-  couple_photo_alt = coalesce(couple_photo_alt, 'Foto da familia do Manoel'),
-  ultrasound_photo_alt = coalesce(ultrasound_photo_alt, 'Ultrassom do Manoel')
-where id = '00000000-0000-0000-0000-000000000001';
+alter table public.gifts
+  add column if not exists product_url text;
 ```
 
 ## Manutenção futura

@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Gift, PackageCheck } from "lucide-react";
+import { BadgeCheck, ExternalLink, Gift, PackageCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -56,6 +56,17 @@ export function GiftCard({ gift, onSelect }: GiftCardProps) {
           </span>
           <span>{remaining} restante(s)</span>
         </div>
+        {gift.product_url ? (
+          <a
+            href={gift.product_url}
+            target="_blank"
+            rel="noreferrer"
+            className="focus-ring inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-sage-200 bg-white/70 px-5 text-sm font-semibold text-sage-800 transition hover:bg-sage-50"
+          >
+            <ExternalLink aria-hidden className="size-4" />
+            Ver sugestao
+          </a>
+        ) : null}
         <Button
           type="button"
           icon={isReserved ? PackageCheck : Gift}

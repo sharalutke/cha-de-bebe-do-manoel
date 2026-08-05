@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { Minus, Plus, X } from "lucide-react";
+import { ExternalLink, Minus, Plus, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -100,6 +100,17 @@ export function GiftDetailsModal({
                   ))}
                 </div>
               </div>
+            ) : null}
+            {gift.product_url ? (
+              <a
+                href={gift.product_url}
+                target="_blank"
+                rel="noreferrer"
+                className="focus-ring mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-sage-200 bg-white/80 px-5 text-sm font-semibold text-sage-800 transition hover:bg-sage-50"
+              >
+                <ExternalLink aria-hidden className="size-4" />
+                Abrir link do presente
+              </a>
             ) : null}
           </div>
 

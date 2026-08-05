@@ -48,6 +48,7 @@ export function GiftRegistry() {
           gift.name,
           gift.description,
           gift.notes,
+          gift.product_url,
           gift.category?.name,
           ...gift.suggested_brands,
         ]
